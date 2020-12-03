@@ -28,8 +28,6 @@ import okhttp3.Response;
 public class CheckSumService implements Runnable{
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientProcessData.class.getName());
     
-    //private Lock lock = new ReentrantLock(); 
-    
     public static void init() {
         for (int i = 0; i < Global.BACKEND_CHECKSUM_BATCH_COUNT; i++) {
         	Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.add(new HashMap<>());
@@ -37,11 +35,8 @@ public class CheckSumService implements Runnable{
     }
 
     public static void start() {
-        Thread t = new Thread(new CheckSumService(), "CheckSumServiceThread1");
+        Thread t = new Thread(new CheckSumService(), "CheckSumServiceThread");
         t.start();
-        
-        //Thread t2 = new Thread(new CheckSumService(), "CheckSumServiceThread2");
-        //t2.start();
     }
 
     @Override
@@ -90,6 +85,11 @@ public class CheckSumService implements Runnable{
                         }
                     }
                 }
+                costTime = System.currentTimeMillis() - startTime;
+                if (costTime>0) {
+                	LOGGER.warn("Backend getWrongTracing consume time: " + costTime);
+                }
+                LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ",result:" + map.size());
                 
                 // trigger generate checksum
                 Global.BACKEND_GEN_CHECKSUM_QUEUE.put((long) pos);
@@ -109,11 +109,6 @@ public class CheckSumService implements Runnable{
                         }
                     }
                 }
-                costTime = System.currentTimeMillis() - startTime;
-                if (costTime>0) {
-                	LOGGER.warn("Backend getWrongTracing consume time: " + costTime);
-                }
-                LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ",result:" + map.size());
                 
             } catch (Exception e) {
                 // record batchPos when an exception  occurs.
@@ -135,7 +130,7 @@ public class CheckSumService implements Runnable{
     }
 
     //call client process, to get all spans of wrong traces.
-    private Map<String,List<String>>  getWrongTrace(@RequestParam String traceIdList, String port, int batchPos) {
+    private Map<String,List<String>> getWrongTrace(@RequestParam String traceIdList, String port, int batchPos) {
         try {
             RequestBody body = new FormBody.Builder()
                     .add("traceIdList", traceIdList).add("batchPos", batchPos + "").build();
