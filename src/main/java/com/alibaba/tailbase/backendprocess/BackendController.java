@@ -1,17 +1,20 @@
 package com.alibaba.tailbase.backendprocess;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
-import com.alibaba.tailbase.Constants;
+import static com.alibaba.tailbase.Constants.PROCESS_COUNT;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
-
-import static com.alibaba.tailbase.Constants.PROCESS_COUNT;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+import com.alibaba.tailbase.Constants;
+import com.alibaba.tailbase.Global;
 
 @RestController
 public class BackendController {
@@ -66,6 +69,11 @@ public class BackendController {
        for (int i = 0; i < BATCH_COUNT; i++) {
            TraceIdBatch currentBatch = TRACEID_BATCH_LIST.get(i);
            if (currentBatch.getBatchPos() != 0) {
+               return false;
+           }
+       }
+       for (int i = 0; i < Global.BACKEND_CHECKSUM_BATCH_COUNT; i++) {
+           if (!Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(i).isEmpty()) {
                return false;
            }
        }

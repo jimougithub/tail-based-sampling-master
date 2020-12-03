@@ -83,6 +83,7 @@ public class ClientProcessData implements Runnable {
                 }
                 if (count % Constants.BATCH_SIZE == 0) {
                     pos++;
+                    LOGGER.info("******************************************************** pos changed: " + pos);
                     // loop cycle
                     if (pos >= BATCH_COUNT) {
                         pos = 0;
@@ -92,7 +93,7 @@ public class ClientProcessData implements Runnable {
                     // TODO to use lock/notify
                     if (traceMap.size() > 0) {
                         while (true) {
-                        	LOGGER.warn("----------------------------------------------------- Waiting for pos release -----------------------------------------------------");
+                        	LOGGER.warn("----------------------------------------------------- Waiting for pos release: " + pos);
                             Thread.sleep(10);
                             if (traceMap.size() == 0) {
                                 break;
@@ -115,11 +116,7 @@ public class ClientProcessData implements Runnable {
         }
     }
 
-    /**
-     *  call backend controller to update wrong tradeId list.
-     * @param badTraceIdList
-     * @param batchPos
-     */
+    //call backend controller to update wrong tradeId list.
     private void updateWrongTraceId(Set<String> badTraceIdList, int batchPos) {
         String json = JSON.toJSONString(badTraceIdList);
         if (badTraceIdList.size() > 0) {
