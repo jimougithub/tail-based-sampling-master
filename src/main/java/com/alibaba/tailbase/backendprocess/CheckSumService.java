@@ -45,11 +45,12 @@ public class CheckSumService implements Runnable{
         TraceIdBatch traceIdBatch = null;
         String[] ports = new String[]{CLIENT_PROCESS_PORT1, CLIENT_PROCESS_PORT2};
         int pos = 0;
+        long startTime;
+        long costTime;
         Map<String, Set<String>> map = Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(pos);
         while (true) {
             try {
-            	long startTime = System.currentTimeMillis();
-            	//lock.lock();
+            	
                 traceIdBatch = BackendController.getFinishedBatch();
                 if (traceIdBatch == null) {
                     // send checksum when client process has all finished.
@@ -60,19 +61,13 @@ public class CheckSumService implements Runnable{
                     }
                     continue;
                 }
-                //lock.unlock();
-                long costTime = System.currentTimeMillis() - startTime;
-                if (costTime>0) {
-                	LOGGER.warn("BackendController.getFinishedBatch() consume time: " + costTime);
-                }
                 
                 // Getting wrong trace data from clients ===========================================================================
-                startTime = System.currentTimeMillis();
                 int batchPos = traceIdBatch.getBatchPos();
                 // to get all spans from remote
+                startTime = System.currentTimeMillis();
                 for (String port : ports) {
-                    Map<String, List<String>> processMap =
-                            getWrongTrace(JSON.toJSONString(traceIdBatch.getTraceIdList()), port, batchPos);
+                    Map<String, List<String>> processMap = getWrongTrace(JSON.toJSONString(traceIdBatch.getTraceIdList()), port, batchPos);
                     if (processMap != null) {
                         for (Map.Entry<String, List<String>> entry : processMap.entrySet()) {
                             String traceId = entry.getKey();
@@ -87,7 +82,7 @@ public class CheckSumService implements Runnable{
                 }
                 costTime = System.currentTimeMillis() - startTime;
                 if (costTime>0) {
-                	LOGGER.warn("Backend getWrongTracing consume time: " + costTime);
+                	LOGGER.warn("getWrongTrace consume time: " + costTime);
                 }
                 LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ",result:" + map.size());
                 
@@ -132,13 +127,11 @@ public class CheckSumService implements Runnable{
     //call client process, to get all spans of wrong traces.
     private Map<String,List<String>> getWrongTrace(@RequestParam String traceIdList, String port, int batchPos) {
         try {
-            RequestBody body = new FormBody.Builder()
-                    .add("traceIdList", traceIdList).add("batchPos", batchPos + "").build();
+            RequestBody body = new FormBody.Builder().add("traceIdList", traceIdList).add("batchPos", batchPos + "").build();
             String url = String.format("http://localhost:%s/getWrongTrace", port);
             Request request = new Request.Builder().url(url).post(body).build();
             Response response = Utils.callHttp(request);
-            Map<String,List<String>> resultMap = JSON.parseObject(response.body().string(),
-                    new TypeReference<Map<String, List<String>>>() {});
+            Map<String,List<String>> resultMap = JSON.parseObject(response.body().string(), new TypeReference<Map<String, List<String>>>() {});
             response.close();
             return resultMap;
         } catch (Exception e) {
@@ -151,8 +144,7 @@ public class CheckSumService implements Runnable{
     private boolean sendCheckSum() {
         try {
             String result = JSON.toJSONString(Global.TRACE_CHUCKSUM_MAP);
-            RequestBody body = new FormBody.Builder()
-                    .add("result", result).build();
+            RequestBody body = new FormBody.Builder().add("result", result).build();
             String url = String.format("http://localhost:%s/api/finished", CommonController.getDataSourcePort());
             Request request = new Request.Builder().url(url).post(body).build();
             Response response = Utils.callHttp(request);

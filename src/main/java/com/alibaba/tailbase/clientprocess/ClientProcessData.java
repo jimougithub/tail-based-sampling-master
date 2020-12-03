@@ -83,6 +83,7 @@ public class ClientProcessData implements Runnable {
                 }
                 if (count % Constants.BATCH_SIZE == 0) {
                     pos++;
+                    LOGGER.info("******************************************************** pos changed: " + pos);
                     // loop cycle
                     if (pos >= BATCH_COUNT) {
                         pos = 0;
