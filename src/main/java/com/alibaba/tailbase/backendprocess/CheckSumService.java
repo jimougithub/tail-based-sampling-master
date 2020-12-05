@@ -42,6 +42,24 @@ public class CheckSumService implements Runnable{
 
     @Override
     public void run() {
+    	//Ensure all system ready together
+		while (!Global.ALL_SYSTEM_READY) {
+			if (Global.SYSTEM_READY) {
+				boolean client1Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT1);
+				boolean client2Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT2);
+				if (client1Ready && client2Ready) {
+					setClientReady(Constants.CLIENT_PROCESS_PORT1);
+					setClientReady(Constants.CLIENT_PROCESS_PORT2);
+					Global.ALL_SYSTEM_READY = true;
+				}
+			}
+			try {
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+    	
     	LOGGER.warn("--------------CheckSumService started. Batch size: {}--------------", Constants.BATCH_SIZE);
         TraceIdBatch traceIdBatch = null;
         String[] ports = new String[]{CLIENT_PROCESS_PORT1, CLIENT_PROCESS_PORT2};
@@ -172,6 +190,33 @@ public class CheckSumService implements Runnable{
         }
         return -1;
     }
-
+    
+    private boolean checkClientReady(String port) {
+        try {
+        	boolean systemReady = false;
+            String url = String.format("http://localhost:%s/getready", port);
+            Request request = new Request.Builder().url(url).get().build();
+            Response response = Utils.callHttp(request);
+            if (response.body().string().equals("yes")) {
+            	systemReady = true;
+            }
+            response.close();
+            return systemReady;
+        } catch (Exception e) {
+            LOGGER.error("checkClientReady error:" + port, e);
+        }
+        return false;
+    }
+    
+    private void setClientReady(String port) {
+        try {
+            String url = String.format("http://localhost:%s/setready", port);
+            Request request = new Request.Builder().url(url).get().build();
+            Response response = Utils.callHttp(request);
+            response.close();
+        } catch (Exception e) {
+            LOGGER.error("setClientReady error:" + port, e);
+        }
+    }
 
 }

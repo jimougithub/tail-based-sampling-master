@@ -21,7 +21,7 @@ public class CommonController {
 
   @GetMapping(value = "/ready")
   public ResponseEntity<String> ready() {
-    if (Global.SYSTEM_READY) {
+    if (Global.ALL_SYSTEM_READY) {
     	return ResponseEntity
     			.status(HttpStatus.OK)
     			.body("suc");
@@ -30,6 +30,21 @@ public class CommonController {
     			.status(HttpStatus.SERVICE_UNAVAILABLE)
     			.body("Not ready");
     }
+  }
+  
+  @RequestMapping("/getready")
+  public String getReady() {
+	  if (Global.SYSTEM_READY) {
+		  return "yes";
+	  } else {
+		  return "no";
+	  }
+  }
+  
+  @RequestMapping("/setready")
+  public String setReady() {
+	  Global.ALL_SYSTEM_READY = true;
+	  return "suc";
   }
 
   @RequestMapping("/setParameter")
