@@ -11,6 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class Global {
 	public static boolean SYSTEM_READY = false;
 	public static boolean ALL_SYSTEM_READY = false;
+	public static long total_cost_time = 0;
 	
 	// save 90 batch for wrong trace
 	public static int BACKEND_CHECKSUM_BATCH_COUNT = 10;

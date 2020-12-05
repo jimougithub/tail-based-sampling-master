@@ -1,24 +1,34 @@
 package com.alibaba.tailbase.clientprocess;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
-import com.alibaba.tailbase.CommonController;
-import com.alibaba.tailbase.Constants;
-import com.alibaba.tailbase.Utils;
-import okhttp3.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.StringUtils;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+import com.alibaba.tailbase.CommonController;
+import com.alibaba.tailbase.Constants;
+import com.alibaba.tailbase.Global;
+import com.alibaba.tailbase.Utils;
+
+import okhttp3.FormBody;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 
 public class ClientProcessData implements Runnable {
@@ -123,17 +133,15 @@ public class ClientProcessData implements Runnable {
         if (badTraceIdList.size() == 0) {
         	badTraceIdList.add("NULL");
         }
-        if (badTraceIdList.size() > 0) {
-            try {
-                LOGGER.info("updateBadTraceId, json:" + json + ", batch:" + batchPos);
-                RequestBody body = new FormBody.Builder()
-                        .add("traceIdListJson", json).add("batchPos", batchPos + "").build();
-                Request request = new Request.Builder().url("http://localhost:8002/setWrongTraceId").post(body).build();
-                Response response = Utils.callHttp(request);
-                response.close();
-            } catch (Exception e) {
-                LOGGER.warn("fail to updateBadTraceId, json:" + json + ", batch:" + batchPos);
-            }
+        try {
+            LOGGER.info("updateBadTraceId, json:" + json + ", batch:" + batchPos);
+            RequestBody body = new FormBody.Builder()
+                    .add("traceIdListJson", json).add("batchPos", batchPos + "").build();
+            Request request = new Request.Builder().url("http://localhost:8002/setWrongTraceId").post(body).build();
+            Response response = Utils.callHttp(request);
+            response.close();
+        } catch (Exception e) {
+            LOGGER.warn("fail to updateBadTraceId, json:" + json + ", batch:" + batchPos);
         }
     }
 
@@ -143,6 +151,7 @@ public class ClientProcessData implements Runnable {
             Request request = new Request.Builder().url("http://localhost:8002/finish").build();
             Response response = Utils.callHttp(request);
             response.close();
+            LOGGER.warn("total get wrong data cost time: " + Global.total_cost_time);
         } catch (Exception e) {
             LOGGER.warn("fail to callFinish");
         }
@@ -163,37 +172,83 @@ public class ClientProcessData implements Runnable {
         if (next == Constants.BATCH_COUNT) {
             next = 0;
         }
-        getWrongTraceWithBatch(previous, pos, traceIdList, wrongTraceMap);
-        getWrongTraceWithBatch(pos, pos, traceIdList,  wrongTraceMap);
-        getWrongTraceWithBatch(next, pos, traceIdList, wrongTraceMap);
+        
+        // EMGJH Start
+        // getWrongTraceWithBatch(previous, pos, traceIdList, wrongTraceMap);
+        // getWrongTraceWithBatch(pos, pos, traceIdList,  wrongTraceMap);
+        // getWrongTraceWithBatch(next, pos, traceIdList, wrongTraceMap);
+        getWrongTraceWithThreeBatch(previous, pos, next, traceIdList, wrongTraceMap);
+        // EMGJH End
+        
         // to clear spans, don't block client process thread. TODO to use lock/notify
         BATCH_TRACE_LIST.get(previous).clear();
         return JSON.toJSONString(wrongTraceMap);
     }
+    
+    
+    // EMGJH Start
+    private static void getWrongTraceWithThreeBatch(int previous, int currentPos, int next, List<String> traceIdList, Map<String,List<String>> wrongTraceMap) {
+        Map<String, List<String>> currentTraceMap = BATCH_TRACE_LIST.get(currentPos);
 
-    private static void getWrongTraceWithBatch(int batchPos, int pos,  List<String> traceIdList, Map<String,List<String>> wrongTraceMap) {
-        // donot lock traceMap,  traceMap may be clear anytime.
-        Map<String, List<String>> traceMap = BATCH_TRACE_LIST.get(batchPos);
+        Map<String, List<String>> previousTraceMap = BATCH_TRACE_LIST.get(previous);
+        Map<String, List<String>> nextTraceMap = BATCH_TRACE_LIST.get(next);
+
         for (String traceId : traceIdList) {
-        	if (traceId.equals("NULL")) {
-        		continue;
-        	}
-            List<String> spanList = traceMap.get(traceId);
-            if (spanList != null) {
+            List<String> spanListCurrentTraceMap = currentTraceMap.get(traceId);
+            List<String> spanListPreviousTraceMap = previousTraceMap.get(traceId);
+
+            // Firstly, try to locate the traceId in spanListCurrentTraceMap
+            if (spanListCurrentTraceMap != null) {
                 // one trace may cross to batch (e.g batch size 20000, span1 in line 19999, span2 in line 20001)
                 List<String> existSpanList = wrongTraceMap.get(traceId);
                 if (existSpanList != null) {
-                    existSpanList.addAll(spanList);
+                    existSpanList.addAll(spanListCurrentTraceMap);
                 } else {
-                    wrongTraceMap.put(traceId, spanList);
+                    wrongTraceMap.put(traceId, spanListCurrentTraceMap);
                 }
-                // output spanlist to check
-                String spanListString = spanList.stream().collect(Collectors.joining("\n"));
-                LOGGER.info(String.format("getWrongTracing, batchPos:%d, pos:%d, traceId:%s, spanList:\n %s",
-                        batchPos, pos,  traceId, spanListString));
+            }
+
+            // If the traceId is located in spanListPreviousTraceMap, then it should Not be located spanListNextTraceMap
+            if (spanListPreviousTraceMap != null) {
+                // one trace may cross to batch (e.g batch size 20000, span1 in line 19999, span2 in line 20001)
+                List<String> existSpanList = wrongTraceMap.get(traceId);
+                if (existSpanList != null) {
+                    existSpanList.addAll(spanListPreviousTraceMap);
+                } else {
+                    wrongTraceMap.put(traceId, spanListPreviousTraceMap);
+                }
+            } else {
+
+                List<String> spanListNextTraceMap = nextTraceMap.get(traceId);
+                if (spanListNextTraceMap != null) {
+                    // one trace may cross to batch (e.g batch size 20000, span1 in line 19999, span2 in line 20001)
+                    List<String> existSpanList = wrongTraceMap.get(traceId);
+                    if (existSpanList != null) {
+                        existSpanList.addAll(spanListNextTraceMap);
+                    } else {
+                        wrongTraceMap.put(traceId, spanListNextTraceMap);
+                    }
+                }
             }
         }
     }
+    // EMGJH End
+
+	/*
+	 * private static void getWrongTraceWithBatch(int batchPos, int pos,
+	 * List<String> traceIdList, Map<String,List<String>> wrongTraceMap) { // donot
+	 * lock traceMap, traceMap may be clear anytime. Map<String, List<String>>
+	 * traceMap = BATCH_TRACE_LIST.get(batchPos); for (String traceId : traceIdList)
+	 * { if (traceId.equals("NULL")) { continue; } List<String> spanList =
+	 * traceMap.get(traceId); if (spanList != null) { // one trace may cross to
+	 * batch (e.g batch size 20000, span1 in line 19999, span2 in line 20001)
+	 * List<String> existSpanList = wrongTraceMap.get(traceId); if (existSpanList !=
+	 * null) { existSpanList.addAll(spanList); } else { wrongTraceMap.put(traceId,
+	 * spanList); } // output spanlist to check String spanListString =
+	 * spanList.stream().collect(Collectors.joining("\n")); LOGGER.info(String.
+	 * format("getWrongTracing, batchPos:%d, pos:%d, traceId:%s, spanList:\n %s",
+	 * batchPos, pos, traceId, spanListString)); } } }
+	 */
 
     private String getPath(){
         String port = System.getProperty("server.port", "8080");

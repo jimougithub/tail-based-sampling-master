@@ -7,6 +7,6 @@ public class Constants {
     public static final String BACKEND_PROCESS_PORT2 = "8003";
     public static final String BACKEND_PROCESS_PORT3 = "8004";
     public static int BATCH_COUNT = 15;
-    public static int BATCH_SIZE = 60000;
+    public static int BATCH_SIZE = 20000;
     public static int PROCESS_COUNT = 2;
 }

@@ -100,6 +100,7 @@ public class CheckSumService implements Runnable{
                     }
                 }
                 costTime = System.currentTimeMillis() - startTime;
+                Global.total_cost_time = Global.total_cost_time + costTime;
                 if (costTime>2) {
                 	LOGGER.warn("getWrongTrace batchPos: {} consume time: {}", batchPos, costTime);
                 }
@@ -170,6 +171,7 @@ public class CheckSumService implements Runnable{
             if (response.isSuccessful()) {
                 response.close();
                 LOGGER.warn("suc to sendCheckSum, result:" + result);
+                LOGGER.warn("total get trace time: " + Global.total_cost_time);
                 return true;
             }
             LOGGER.warn("fail to sendCheckSum:" + response.message());
