@@ -25,6 +25,10 @@ public class TraceIdBatch {
     public void setProcessCount(int processCount) {
         this.processCount = processCount;
     }
+    
+    public void addProcessCount() {
+        this.processCount++;
+    }
 
     public List<String> getTraceIdList() {
         return traceIdList;

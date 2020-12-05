@@ -20,5 +20,13 @@ public class ControlService {
 	  			backendGenCheckSum.run();
 	  		}
 	  	}
+	  	
+	  	//Sleep 10 seconds before mark system ready
+	  	try {
+			Thread.sleep(10000);
+			Global.SYSTEM_READY = true;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }

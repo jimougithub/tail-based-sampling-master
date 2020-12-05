@@ -17,7 +17,7 @@ public class ClientController {
     	long  startTime = System.currentTimeMillis();
         String json = ClientProcessData.getWrongTracing(traceIdList, batchPos);
         long costTime = System.currentTimeMillis() - startTime;
-        if (costTime>0) {
+        if (costTime>2) {
         	LOGGER.warn("getWrongTracing consume time: " + costTime);
         }
         LOGGER.info("suc to getWrongTrace, batchPos:" + batchPos);

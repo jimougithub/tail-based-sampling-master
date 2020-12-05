@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.alibaba.tailbase.CommonController;
+import com.alibaba.tailbase.Constants;
 import com.alibaba.tailbase.Global;
 import com.alibaba.tailbase.Utils;
 import com.alibaba.tailbase.clientprocess.ClientProcessData;
@@ -41,7 +42,7 @@ public class CheckSumService implements Runnable{
 
     @Override
     public void run() {
-    	LOGGER.warn("--------------CheckSumService started--------------");
+    	LOGGER.warn("--------------CheckSumService started. Batch size: {}--------------", Constants.BATCH_SIZE);
         TraceIdBatch traceIdBatch = null;
         String[] ports = new String[]{CLIENT_PROCESS_PORT1, CLIENT_PROCESS_PORT2};
         int pos = 0;
@@ -81,10 +82,10 @@ public class CheckSumService implements Runnable{
                     }
                 }
                 costTime = System.currentTimeMillis() - startTime;
-                if (costTime>0) {
-                	LOGGER.warn("getWrongTrace consume time: " + costTime);
+                if (costTime>2) {
+                	LOGGER.warn("getWrongTrace batchPos: {} consume time: {}", batchPos, costTime);
                 }
-                LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ",result:" + map.size());
+                LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ", result:" + map.size());
                 
                 // trigger generate checksum
                 Global.BACKEND_GEN_CHECKSUM_QUEUE.put((long) pos);

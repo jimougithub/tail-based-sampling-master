@@ -22,15 +22,13 @@ import java.util.stream.Collectors;
 
 
 public class ClientProcessData implements Runnable {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientProcessData.class.getName());
 
     // an list of trace map,like ring buffer. key is traceId, value is spans
     private static List<Map<String,List<String>>> BATCH_TRACE_LIST = new ArrayList<>();
-    // make 50 bucket to cache traceData
-    private static int BATCH_COUNT = 15;
+    
     public static  void init() {
-        for (int i = 0; i < BATCH_COUNT; i++) {
+        for (int i = 0; i < Constants.BATCH_COUNT; i++) {
             BATCH_TRACE_LIST.add(new ConcurrentHashMap<>(Constants.BATCH_SIZE));
         }
     }
@@ -57,6 +55,7 @@ public class ClientProcessData implements Runnable {
             String line;
             long count = 0;
             int pos = 0;
+            int batchPos = 0;
             Set<String> badTraceIdList = new HashSet<>(1000);
             Map<String, List<String>> traceMap = BATCH_TRACE_LIST.get(pos);
             while ((line = bf.readLine()) != null) {
@@ -82,10 +81,11 @@ public class ClientProcessData implements Runnable {
                     }
                 }
                 if (count % Constants.BATCH_SIZE == 0) {
+                	batchPos = pos;
                     pos++;
                     LOGGER.info("******************************************************** pos changed: " + pos);
                     // loop cycle
-                    if (pos >= BATCH_COUNT) {
+                    if (pos >= Constants.BATCH_COUNT) {
                         pos = 0;
                     }
                     traceMap = BATCH_TRACE_LIST.get(pos);
@@ -93,7 +93,7 @@ public class ClientProcessData implements Runnable {
                     // TODO to use lock/notify
                     if (traceMap.size() > 0) {
                         while (true) {
-                        	LOGGER.warn("----------------------------------------------------- Waiting for pos release: " + pos);
+                        	LOGGER.warn("------------------- Completed count: {}. Waiting for pos release: {}", count, pos);
                             Thread.sleep(10);
                             if (traceMap.size() == 0) {
                                 break;
@@ -101,13 +101,14 @@ public class ClientProcessData implements Runnable {
                         }
                     }
                     // batchPos begin from 0, so need to minus 1
-                    int batchPos = (int) count / Constants.BATCH_SIZE - 1;
                     updateWrongTraceId(badTraceIdList, batchPos);
                     badTraceIdList.clear();
                     LOGGER.info("suc to updateBadTraceId, batchPos:" + batchPos);
                 }
             }
-            updateWrongTraceId(badTraceIdList, (int) (count / Constants.BATCH_SIZE - 1));
+            if (badTraceIdList.size() > 0) {
+            	updateWrongTraceId(badTraceIdList, pos);
+            }
             bf.close();
             input.close();
             callFinish();
@@ -119,6 +120,9 @@ public class ClientProcessData implements Runnable {
     //call backend controller to update wrong tradeId list.
     private void updateWrongTraceId(Set<String> badTraceIdList, int batchPos) {
         String json = JSON.toJSONString(badTraceIdList);
+        if (badTraceIdList.size() == 0) {
+        	badTraceIdList.add("NULL");
+        }
         if (badTraceIdList.size() > 0) {
             try {
                 LOGGER.info("updateBadTraceId, json:" + json + ", batch:" + batchPos);
@@ -150,13 +154,13 @@ public class ClientProcessData implements Runnable {
                 batchPos, wrongTraceIdList));
         List<String> traceIdList = JSON.parseObject(wrongTraceIdList, new TypeReference<List<String>>(){});
         Map<String,List<String>> wrongTraceMap = new HashMap<>();
-        int pos = batchPos % BATCH_COUNT;
+        int pos = batchPos % Constants.BATCH_COUNT;
         int previous = pos - 1;
         if (previous == -1) {
-            previous = BATCH_COUNT -1;
+            previous = Constants.BATCH_COUNT -1;
         }
         int next = pos + 1;
-        if (next == BATCH_COUNT) {
+        if (next == Constants.BATCH_COUNT) {
             next = 0;
         }
         getWrongTraceWithBatch(previous, pos, traceIdList, wrongTraceMap);
@@ -171,6 +175,9 @@ public class ClientProcessData implements Runnable {
         // donot lock traceMap,  traceMap may be clear anytime.
         Map<String, List<String>> traceMap = BATCH_TRACE_LIST.get(batchPos);
         for (String traceId : traceIdList) {
+        	if (traceId.equals("NULL")) {
+        		continue;
+        	}
             List<String> spanList = traceMap.get(traceId);
             if (spanList != null) {
                 // one trace may cross to batch (e.g batch size 20000, span1 in line 19999, span2 in line 20001)
@@ -191,7 +198,7 @@ public class ClientProcessData implements Runnable {
     private String getPath(){
         String port = System.getProperty("server.port", "8080");
         Integer targetPort = CommonController.getDataSourcePort();
-        //targetPort = 8080;															//remove before promote to production
+        targetPort = 8080;															//remove before promote to production
         if ("8000".equals(port)) {
             return "http://localhost:" + targetPort + "/trace1.data";
         } else if ("8001".equals(port)){

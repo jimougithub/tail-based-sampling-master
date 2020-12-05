@@ -1,9 +1,13 @@
 package com.alibaba.tailbase;
 
-import com.alibaba.tailbase.clientprocess.ClientProcessData;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.alibaba.tailbase.clientprocess.ClientProcessData;
 
 
 @RestController
@@ -15,9 +19,17 @@ public class CommonController {
     return DATA_SOURCE_PORT;
   }
 
-  @RequestMapping("/ready")
-  public String ready() {
-    return "suc";
+  @GetMapping(value = "/ready")
+  public ResponseEntity<String> ready() {
+    if (Global.SYSTEM_READY) {
+    	return ResponseEntity
+    			.status(HttpStatus.OK)
+    			.body("suc");
+    } else {
+    	return ResponseEntity
+    			.status(HttpStatus.SERVICE_UNAVAILABLE)
+    			.body("Not ready");
+    }
   }
 
   @RequestMapping("/setParameter")
