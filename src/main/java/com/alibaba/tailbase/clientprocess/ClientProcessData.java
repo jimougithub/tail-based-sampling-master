@@ -129,6 +129,7 @@ public class ClientProcessData implements Runnable {
 
     //call backend controller to update wrong tradeId list.
     private void updateWrongTraceId(Set<String> badTraceIdList, int batchPos) {
+    	long startTime=0, costTime=0;
         String json = JSON.toJSONString(badTraceIdList);
         if (badTraceIdList.size() == 0) {
         	badTraceIdList.add("NULL");
@@ -138,10 +139,16 @@ public class ClientProcessData implements Runnable {
             RequestBody body = new FormBody.Builder()
                     .add("traceIdListJson", json).add("batchPos", batchPos + "").build();
             Request request = new Request.Builder().url("http://localhost:8002/setWrongTraceId").post(body).build();
+            startTime = System.currentTimeMillis();
             Response response = Utils.callHttp(request);
+            costTime = System.currentTimeMillis() - startTime;
             response.close();
         } catch (Exception e) {
             LOGGER.warn("fail to updateBadTraceId, json:" + json + ", batch:" + batchPos);
+        }
+        Global.total_cost_time = Global.total_cost_time + costTime;
+        if (costTime>2) {
+        	LOGGER.warn("updateWrongTraceId batchPos: {} consume time: {}", batchPos, costTime);
         }
     }
 
@@ -218,7 +225,6 @@ public class ClientProcessData implements Runnable {
                     wrongTraceMap.put(traceId, spanListPreviousTraceMap);
                 }
             } else {
-
                 List<String> spanListNextTraceMap = nextTraceMap.get(traceId);
                 if (spanListNextTraceMap != null) {
                     // one trace may cross to batch (e.g batch size 20000, span1 in line 19999, span2 in line 20001)

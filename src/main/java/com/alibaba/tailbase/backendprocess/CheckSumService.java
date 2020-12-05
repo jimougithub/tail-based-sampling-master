@@ -44,19 +44,19 @@ public class CheckSumService implements Runnable{
     public void run() {
     	//Ensure all system ready together
 		while (!Global.ALL_SYSTEM_READY) {
-			if (Global.SYSTEM_READY) {
-				boolean client1Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT1);
-				boolean client2Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT2);
-				if (client1Ready && client2Ready) {
-					setClientReady(Constants.CLIENT_PROCESS_PORT1);
-					setClientReady(Constants.CLIENT_PROCESS_PORT2);
-					Global.ALL_SYSTEM_READY = true;
-				}
-			}
 			try {
+				if (Global.SYSTEM_READY) {
+					boolean client1Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT1);
+					boolean client2Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT2);
+					if (client1Ready && client2Ready) {
+						setClientReady(Constants.CLIENT_PROCESS_PORT1);
+						setClientReady(Constants.CLIENT_PROCESS_PORT2);
+						Global.ALL_SYSTEM_READY = true;
+					}
+				}
 				Thread.sleep(200);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			} catch (Exception e) {
+				LOGGER.error("checkClientReady error", e);
 			}
 		}
     	
