@@ -205,7 +205,7 @@ public class CheckSumService implements Runnable{
             response.close();
             return systemReady;
         } catch (Exception e) {
-            LOGGER.error("checkClientReady error:" + port, e);
+            LOGGER.error("checkClientReady port: {} error: {}", port, e.getMessage());
         }
         return false;
     }
@@ -217,7 +217,7 @@ public class CheckSumService implements Runnable{
             Response response = Utils.callHttp(request);
             response.close();
         } catch (Exception e) {
-            LOGGER.error("setClientReady error:" + port, e);
+            LOGGER.error("setClientReady port: {} error: {}", port, e.getMessage());
         }
     }
 
