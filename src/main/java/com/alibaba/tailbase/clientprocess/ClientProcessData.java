@@ -64,6 +64,9 @@ public class ClientProcessData implements Runnable {
             long count = 0;
             int pos = 0;
             int batchPos = 0;
+            String currentTraceId = "";
+            String currentBadID = "";
+            List<String> spanList = null;
             Set<String> badTraceIdList = new HashSet<>(1000);
             Map<String, List<String>> traceMap = BATCH_TRACE_LIST.get(pos);
             while ((line = bf.readLine()) != null) {
@@ -71,19 +74,24 @@ public class ClientProcessData implements Runnable {
                 String[] cols = line.split("\\|");
                 if (cols != null && cols.length > 1 ) {
                     String traceId = cols[0];
-                    List<String> spanList = traceMap.get(traceId);
-                    if (spanList == null) {
-                        spanList = new ArrayList<>();
-                        traceMap.put(traceId, spanList);
+                    if (!currentTraceId.equals(traceId)) {
+                    	currentTraceId = traceId;
+                    	spanList = traceMap.get(traceId);
+                        if (spanList == null) {
+                            spanList = new ArrayList<>();
+                            traceMap.put(traceId, spanList);
+                        }
                     }
                     spanList.add(line);
-                    if (cols.length > 8) {
+                    if (cols.length > 8 && !currentBadID.equals(traceId)) {
                         String tags = cols[8];
                         if (tags != null) {
                             if (tags.contains("error=1")) {
-                                badTraceIdList.add(traceId);
+                            	currentBadID = traceId;
+                            	badTraceIdList.add(traceId);
                             } else if (tags.contains("http.status_code=") && tags.indexOf("http.status_code=200") < 0) {
-                                badTraceIdList.add(traceId);
+                            	currentBadID = traceId;
+                            	badTraceIdList.add(traceId);
                             }
                         }
                     }
@@ -91,7 +99,7 @@ public class ClientProcessData implements Runnable {
                 if (count % Constants.BATCH_SIZE == 0) {
                 	batchPos = pos;
                     pos++;
-                    LOGGER.info("******************************************************** pos changed: " + pos);
+                    //LOGGER.info("******************************************************** pos changed: " + pos);
                     // loop cycle
                     if (pos >= Constants.BATCH_COUNT) {
                         pos = 0;
@@ -99,22 +107,17 @@ public class ClientProcessData implements Runnable {
                     traceMap = BATCH_TRACE_LIST.get(pos);
                     // donot produce data, wait backend to consume data
                     // TODO to use lock/notify
-                    if (traceMap.size() > 0) {
-                        while (true) {
-                        	LOGGER.warn("------------------- Completed count: {}. Waiting for pos release: {}", count, pos);
-                            Thread.sleep(10);
-                            if (traceMap.size() == 0) {
-                                break;
-                            }
-                        }
+                    while (!traceMap.isEmpty()) {
+                    	LOGGER.warn("------------------- Completed count: {}. Waiting for pos release: {}", count, pos);
+                        Thread.sleep(10);
                     }
                     // batchPos begin from 0, so need to minus 1
                     updateWrongTraceId(badTraceIdList, batchPos);
                     badTraceIdList.clear();
-                    LOGGER.info("suc to updateBadTraceId, batchPos:" + batchPos);
+                    //LOGGER.info("suc to updateBadTraceId, batchPos:" + batchPos);
                 }
             }
-            if (badTraceIdList.size() > 0) {
+            if (!badTraceIdList.isEmpty()) {
             	updateWrongTraceId(badTraceIdList, pos);
             }
             bf.close();
@@ -128,11 +131,11 @@ public class ClientProcessData implements Runnable {
     //call backend controller to update wrong tradeId list.
     private void updateWrongTraceId(Set<String> badTraceIdList, int batchPos) {
         String json = JSON.toJSONString(badTraceIdList);
-        if (badTraceIdList.size() == 0) {
+        if (badTraceIdList.isEmpty()) {
         	badTraceIdList.add("NULL");
         }
         try {
-            LOGGER.info("updateBadTraceId, json:" + json + ", batch:" + batchPos);
+            //LOGGER.info("updateBadTraceId, json:" + json + ", batch:" + batchPos);
             /*RequestBody body = new FormBody.Builder()
                     .add("traceIdListJson", json).add("batchPos", batchPos + "").build();
             Request request = new Request.Builder().url("http://localhost:8002/setWrongTraceId").post(body).build();

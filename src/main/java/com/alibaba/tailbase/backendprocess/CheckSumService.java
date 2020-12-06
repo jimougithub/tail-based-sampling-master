@@ -57,7 +57,7 @@ public class CheckSumService implements Runnable{
 				}
 				Thread.sleep(200);
 			} catch (Exception e) {
-				LOGGER.error("checkClientReady error", e);
+				LOGGER.error("checkClientReady error: " + e.getMessage());
 			}
 		}
     	
@@ -112,7 +112,7 @@ public class CheckSumService implements Runnable{
                 if (costTime>2) {
                 	LOGGER.warn("getWrongTrace batchPos: {} consume time: {}", batchPos, costTime);
                 }
-                LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ", result:" + map.size());
+                //LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ", result:" + map.size());
                 
                 // trigger generate checksum
                 Global.BACKEND_GEN_CHECKSUM_QUEUE.put((long) pos);
@@ -123,14 +123,9 @@ public class CheckSumService implements Runnable{
                 	pos = 0;
                 }
                 map = Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(pos);
-                if (map.size() > 0) {
-                	while (true) {
-                    	LOGGER.warn("-------------------- Waiting for backend pos release: "+ pos);
-                        Thread.sleep(10);
-                        if (map.size() == 0) {
-                            break;
-                        }
-                    }
+                while (!map.isEmpty()) {
+                	LOGGER.warn("-------------------- Waiting for backend pos release: "+ pos);
+                    Thread.sleep(10);
                 }
                 
             } catch (Exception e) {

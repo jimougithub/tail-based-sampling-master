@@ -45,7 +45,7 @@ public class BackendController {
     public static String setWrongTraceId(@RequestParam String traceIdListJson, @RequestParam int batchPos) {
         lock.lock();
         List<String> traceIdList = JSON.parseObject(traceIdListJson, new TypeReference<List<String>>() {});
-        LOGGER.info(String.format("setWrongTraceId had called, batchPos:%d, traceIdList:%s", batchPos, traceIdListJson));
+        //LOGGER.info(String.format("setWrongTraceId had called, batchPos:%d, traceIdList:%s", batchPos, traceIdListJson));
         TraceIdBatch traceIdBatch = TRACEID_BATCH_LIST.get(batchPos);
         if (traceIdBatch.getBatchPos() != 0 && traceIdBatch.getBatchPos() != batchPos) {
             LOGGER.warn("overwrite traceId batch when call setWrongTraceId");
@@ -73,7 +73,7 @@ public class BackendController {
    public static boolean isFinished() {
        for (int i = 0; i < Constants.BATCH_COUNT; i++) {
            TraceIdBatch currentBatch = TRACEID_BATCH_LIST.get(i);
-           if (currentBatch.getBatchPos() != 0) {
+           if (currentBatch.getProcessCount() > 0) {
                return false;
            }
        }
