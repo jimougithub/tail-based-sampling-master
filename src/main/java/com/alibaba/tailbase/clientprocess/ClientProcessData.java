@@ -25,9 +25,7 @@ import com.alibaba.tailbase.Constants;
 import com.alibaba.tailbase.Global;
 import com.alibaba.tailbase.Utils;
 
-import okhttp3.FormBody;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 
@@ -129,26 +127,21 @@ public class ClientProcessData implements Runnable {
 
     //call backend controller to update wrong tradeId list.
     private void updateWrongTraceId(Set<String> badTraceIdList, int batchPos) {
-    	long startTime=0, costTime=0;
         String json = JSON.toJSONString(badTraceIdList);
         if (badTraceIdList.size() == 0) {
         	badTraceIdList.add("NULL");
         }
         try {
             LOGGER.info("updateBadTraceId, json:" + json + ", batch:" + batchPos);
-            RequestBody body = new FormBody.Builder()
+            /*RequestBody body = new FormBody.Builder()
                     .add("traceIdListJson", json).add("batchPos", batchPos + "").build();
             Request request = new Request.Builder().url("http://localhost:8002/setWrongTraceId").post(body).build();
-            startTime = System.currentTimeMillis();
             Response response = Utils.callHttp(request);
-            costTime = System.currentTimeMillis() - startTime;
-            response.close();
+            response.close();*/
+            //Use socket to send data
+            Global.SOCKET_SEND_QUEUE.put("setWrongTraceId|" + json + "|" + batchPos);
         } catch (Exception e) {
             LOGGER.warn("fail to updateBadTraceId, json:" + json + ", batch:" + batchPos);
-        }
-        Global.total_cost_time = Global.total_cost_time + costTime;
-        if (costTime>2) {
-        	LOGGER.warn("updateWrongTraceId batchPos: {} consume time: {}", batchPos, costTime);
         }
     }
 

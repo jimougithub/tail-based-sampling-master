@@ -27,7 +27,7 @@ public class BackendController {
     // single thread to run, do not use lock
     private static volatile Integer CURRENT_BATCH = 0;
     
-    private Lock lock = new ReentrantLock();
+    private static Lock lock = new ReentrantLock();
 
     // save number of batch for wrong trace
     private static List<TraceIdBatch> TRACEID_BATCH_LIST= new ArrayList<>();
@@ -38,7 +38,11 @@ public class BackendController {
     }
 
     @RequestMapping("/setWrongTraceId")
-    public String setWrongTraceId(@RequestParam String traceIdListJson, @RequestParam int batchPos) {
+    public String setWrongTraceIdRequest(@RequestParam String traceIdListJson, @RequestParam int batchPos) {
+        return setWrongTraceId(traceIdListJson, batchPos);
+    }
+    
+    public static String setWrongTraceId(@RequestParam String traceIdListJson, @RequestParam int batchPos) {
         lock.lock();
         List<String> traceIdList = JSON.parseObject(traceIdListJson, new TypeReference<List<String>>() {});
         LOGGER.info(String.format("setWrongTraceId had called, batchPos:%d, traceIdList:%s", batchPos, traceIdListJson));
@@ -81,6 +85,7 @@ public class BackendController {
        if (FINISH_PROCESS_COUNT < Constants.PROCESS_COUNT) {
            return false;
        }
+       Global.ALL_FINISHED = true;
        return true;
    }
 

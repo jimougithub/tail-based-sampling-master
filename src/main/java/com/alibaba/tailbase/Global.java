@@ -11,6 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class Global {
 	public static boolean SYSTEM_READY = false;
 	public static boolean ALL_SYSTEM_READY = false;
+	public static boolean ALL_FINISHED = false;
 	public static long total_cost_time = 0;
 	
 	// save 90 batch for wrong trace
@@ -20,4 +21,7 @@ public class Global {
 	// save chuckSum for the total wrong trace
     public static Map<String, String> TRACE_CHUCKSUM_MAP = new ConcurrentHashMap<>();
     public static BlockingQueue<Long> BACKEND_GEN_CHECKSUM_QUEUE = new LinkedBlockingQueue<Long>();
+    
+    // socket send queue
+    public static BlockingQueue<String> SOCKET_SEND_QUEUE = new LinkedBlockingQueue<String>(); 
 }

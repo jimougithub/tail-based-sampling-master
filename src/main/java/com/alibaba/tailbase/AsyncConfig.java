@@ -27,4 +27,26 @@ public class AsyncConfig implements AsyncConfigurer {
 		executor.initialize();
 		return executor;
 	}
+	
+	@Bean
+	public Executor asyncSocketReceiveExecutor() {
+		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+		executor.setCorePoolSize(2);
+		executor.setMaxPoolSize(2);
+		executor.setQueueCapacity(2);
+		executor.setThreadNamePrefix("socket_receive_thread-");
+		executor.initialize();
+		return executor;
+	}
+	
+	@Bean
+	public Executor asyncSocketSendExecutor() {
+		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+		executor.setCorePoolSize(1);
+		executor.setMaxPoolSize(1);
+		executor.setQueueCapacity(1);
+		executor.setThreadNamePrefix("socket_send_thread-");
+		executor.initialize();
+		return executor;
+	}
 }
