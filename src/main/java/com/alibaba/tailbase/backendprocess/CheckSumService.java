@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +67,7 @@ public class CheckSumService implements Runnable{
         int pos = 0;
         long startTime;
         long costTime;
+        String response = "";
         Map<String, Set<String>> map = Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(pos);
         while (true) {
             try {
@@ -85,19 +87,25 @@ public class CheckSumService implements Runnable{
                 int batchPos = traceIdBatch.getBatchPos();
                 // to get all spans from remote
                 startTime = System.currentTimeMillis();
+                Global.SOCKET_SEND_QUEUE1.put("getWrongTrace|" + JSON.toJSONString(traceIdBatch.getTraceIdList()) + "|" + batchPos);		//send to client1
+                Global.SOCKET_SEND_QUEUE2.put("getWrongTrace|" + JSON.toJSONString(traceIdBatch.getTraceIdList()) + "|" + batchPos);		//send to client2
                 for (String port : ports) {
-                    Map<String, List<String>> processMap = getWrongTrace(JSON.toJSONString(traceIdBatch.getTraceIdList()), port, batchPos);
-                    if (processMap != null) {
-                        for (Map.Entry<String, List<String>> entry : processMap.entrySet()) {
-                            String traceId = entry.getKey();
-                            Set<String> spanSet = map.get(traceId);
-                            if (spanSet == null) {
-                                spanSet = new HashSet<>();
-                                map.put(traceId, spanSet);
+                    //Map<String, List<String>> processMap = getWrongTrace(JSON.toJSONString(traceIdBatch.getTraceIdList()), port, batchPos);
+                	response = Global.SOCKET_RESPONSE_QUEUE.poll(1, TimeUnit.SECONDS);
+                	if (response != null) {
+                		Map<String,List<String>> processMap = JSON.parseObject(response, new TypeReference<Map<String, List<String>>>() {});
+                        if (processMap != null) {
+                            for (Map.Entry<String, List<String>> entry : processMap.entrySet()) {
+                                String traceId = entry.getKey();
+                                Set<String> spanSet = map.get(traceId);
+                                if (spanSet == null) {
+                                    spanSet = new HashSet<>();
+                                    map.put(traceId, spanSet);
+                                }
+                                spanSet.addAll(entry.getValue());
                             }
-                            spanSet.addAll(entry.getValue());
                         }
-                    }
+                	}
                 }
                 costTime = System.currentTimeMillis() - startTime;
                 Global.total_cost_time = Global.total_cost_time + costTime;

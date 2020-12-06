@@ -23,5 +23,9 @@ public class Global {
     public static BlockingQueue<Long> BACKEND_GEN_CHECKSUM_QUEUE = new LinkedBlockingQueue<Long>();
     
     // socket send queue
-    public static BlockingQueue<String> SOCKET_SEND_QUEUE = new LinkedBlockingQueue<String>(); 
+    public static BlockingQueue<String> SOCKET_SEND_QUEUE0 = new LinkedBlockingQueue<String>();
+    public static BlockingQueue<String> SOCKET_SEND_QUEUE1 = new LinkedBlockingQueue<String>();
+    public static BlockingQueue<String> SOCKET_SEND_QUEUE2 = new LinkedBlockingQueue<String>();
+    // socket receive quque
+    public static BlockingQueue<String> SOCKET_RESPONSE_QUEUE = new LinkedBlockingQueue<String>();
 }

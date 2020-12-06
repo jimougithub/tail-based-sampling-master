@@ -42,9 +42,9 @@ public class AsyncConfig implements AsyncConfigurer {
 	@Bean
 	public Executor asyncSocketSendExecutor() {
 		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-		executor.setCorePoolSize(1);
-		executor.setMaxPoolSize(1);
-		executor.setQueueCapacity(1);
+		executor.setCorePoolSize(2);
+		executor.setMaxPoolSize(2);
+		executor.setQueueCapacity(2);
 		executor.setThreadNamePrefix("socket_send_thread-");
 		executor.initialize();
 		return executor;

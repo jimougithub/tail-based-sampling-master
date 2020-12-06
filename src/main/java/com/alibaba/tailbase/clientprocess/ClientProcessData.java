@@ -139,7 +139,7 @@ public class ClientProcessData implements Runnable {
             Response response = Utils.callHttp(request);
             response.close();*/
             //Use socket to send data
-            Global.SOCKET_SEND_QUEUE.put("setWrongTraceId|" + json + "|" + batchPos);
+            Global.SOCKET_SEND_QUEUE0.put("setWrongTraceId|" + json + "|" + batchPos);
         } catch (Exception e) {
             LOGGER.warn("fail to updateBadTraceId, json:" + json + ", batch:" + batchPos);
         }

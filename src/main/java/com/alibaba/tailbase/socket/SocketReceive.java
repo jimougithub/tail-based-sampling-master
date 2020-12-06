@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.alibaba.tailbase.Global;
 import com.alibaba.tailbase.backendprocess.BackendController;
+import com.alibaba.tailbase.clientprocess.ClientProcessData;
 
 @Service
 public class SocketReceive {
@@ -21,6 +22,9 @@ public class SocketReceive {
 	@Async("asyncSocketReceiveExecutor")
 	public void run(int port) {
 		try {
+			while (!Global.ALL_SYSTEM_READY) {
+				Thread.sleep(100);
+			}
 			LOGGER.warn("--------------asyncSocketReceiveExecutor start. Listening: {}", port);
 			ServerSocket server = new ServerSocket(port);
             Socket socket = server.accept();
@@ -31,12 +35,17 @@ public class SocketReceive {
             while (!Global.ALL_FINISHED){
             	//Receive data from client
             	receiveData = in.readLine();
-            	LOGGER.info("BackendSocketReceive received: " + receiveData);
+            	//LOGGER.info("BackendSocketReceive received: " + receiveData);
             	String[] cols = receiveData.split("\\|");
             	replyData = "suc";
-            	if (cols.length > 2 && cols[0].equals("setWrongTraceId")) {
-            		replyData = BackendController.setWrongTraceId(cols[1], Integer.valueOf(cols[2]));
+            	if (cols.length > 2) {
+            		if (cols[0].equals("setWrongTraceId")) {
+            			replyData = BackendController.setWrongTraceId(cols[1], Integer.valueOf(cols[2]));
+            		} else if (cols[0].equals("getWrongTrace")) {
+            			replyData = ClientProcessData.getWrongTracing(cols[1], Integer.valueOf(cols[2]));
+            		}
             	}
+            	//LOGGER.info("getWrongTrace response: " + replyData);
             	
             	//Send reply to client
                 out.println(replyData);

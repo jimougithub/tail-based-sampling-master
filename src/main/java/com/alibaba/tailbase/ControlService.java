@@ -30,16 +30,23 @@ public class ControlService {
 	  		//Start socket receive
 	  		socketReceive.run(Constants.BACKEND_SOCKET_PORT1);
 	  		socketReceive.run(Constants.BACKEND_SOCKET_PORT2);
+	  		//Start socket send
+	  		socketSend.run(Global.SOCKET_SEND_QUEUE1, Constants.CLIENT_SOCKET_PORT1);
+	  		socketSend.run(Global.SOCKET_SEND_QUEUE2, Constants.CLIENT_SOCKET_PORT2);
 	  	}
 	  	
 	  	if (Utils.getPort().equals(Constants.CLIENT_PROCESS_PORT1)) {
+	  		//Start socket receive
+	  		socketReceive.run(Constants.CLIENT_SOCKET_PORT1);
 	  		//Start socket send
-	  		socketSend.run(Constants.BACKEND_SOCKET_PORT1);
+	  		socketSend.run(Global.SOCKET_SEND_QUEUE0, Constants.BACKEND_SOCKET_PORT1);
 	  	}
 	  	
 	  	if (Utils.getPort().equals(Constants.CLIENT_PROCESS_PORT2)) {
+	  		//Start socket receive
+	  		socketReceive.run(Constants.CLIENT_SOCKET_PORT2);
 	  		//Start socket send
-	  		socketSend.run(Constants.BACKEND_SOCKET_PORT2);
+	  		socketSend.run(Global.SOCKET_SEND_QUEUE0, Constants.BACKEND_SOCKET_PORT2);
 	  	}
 	  	
 	  	//Sleep 10 seconds before mark system ready
