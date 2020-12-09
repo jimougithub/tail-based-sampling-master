@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.alibaba.tailbase.Global;
+
 
 @RestController
 public class ClientController {
@@ -17,7 +19,8 @@ public class ClientController {
     	long  startTime = System.currentTimeMillis();
         String json = ClientProcessData.getWrongTracing(traceIdList, batchPos);
         long costTime = System.currentTimeMillis() - startTime;
-        if (costTime>0) {
+        Global.total_cost_time = Global.total_cost_time + costTime;
+        if (costTime>2) {
         	LOGGER.warn("getWrongTracing consume time: " + costTime);
         }
         LOGGER.info("suc to getWrongTrace, batchPos:" + batchPos);

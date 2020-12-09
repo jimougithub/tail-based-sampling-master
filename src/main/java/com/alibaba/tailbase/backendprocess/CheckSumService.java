@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.alibaba.tailbase.CommonController;
+import com.alibaba.tailbase.Constants;
 import com.alibaba.tailbase.Global;
 import com.alibaba.tailbase.Utils;
 import com.alibaba.tailbase.clientprocess.ClientProcessData;
@@ -41,12 +43,31 @@ public class CheckSumService implements Runnable{
 
     @Override
     public void run() {
-    	LOGGER.warn("--------------CheckSumService started--------------");
+    	//Ensure all system ready together
+		while (!Global.ALL_SYSTEM_READY) {
+			try {
+				if (Global.SYSTEM_READY) {
+					boolean client1Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT1);
+					boolean client2Ready = checkClientReady(Constants.CLIENT_PROCESS_PORT2);
+					if (client1Ready && client2Ready) {
+						setClientReady(Constants.CLIENT_PROCESS_PORT1);
+						setClientReady(Constants.CLIENT_PROCESS_PORT2);
+						Global.ALL_SYSTEM_READY = true;
+					}
+				}
+				Thread.sleep(200);
+			} catch (Exception e) {
+				LOGGER.error("checkClientReady error: " + e.getMessage());
+			}
+		}
+    	
+    	LOGGER.warn("--------------CheckSumService started. Batch size: {}--------------", Constants.BATCH_SIZE);
         TraceIdBatch traceIdBatch = null;
         String[] ports = new String[]{CLIENT_PROCESS_PORT1, CLIENT_PROCESS_PORT2};
         int pos = 0;
         long startTime;
         long costTime;
+        String response = "";
         Map<String, Set<String>> map = Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(pos);
         while (true) {
             try {
@@ -66,25 +87,32 @@ public class CheckSumService implements Runnable{
                 int batchPos = traceIdBatch.getBatchPos();
                 // to get all spans from remote
                 startTime = System.currentTimeMillis();
+                Global.SOCKET_SEND_QUEUE1.put("getWrongTrace|" + JSON.toJSONString(traceIdBatch.getTraceIdList()) + "|" + batchPos);		//send to client1
+                Global.SOCKET_SEND_QUEUE2.put("getWrongTrace|" + JSON.toJSONString(traceIdBatch.getTraceIdList()) + "|" + batchPos);		//send to client2
                 for (String port : ports) {
-                    Map<String, List<String>> processMap = getWrongTrace(JSON.toJSONString(traceIdBatch.getTraceIdList()), port, batchPos);
-                    if (processMap != null) {
-                        for (Map.Entry<String, List<String>> entry : processMap.entrySet()) {
-                            String traceId = entry.getKey();
-                            Set<String> spanSet = map.get(traceId);
-                            if (spanSet == null) {
-                                spanSet = new HashSet<>();
-                                map.put(traceId, spanSet);
+                    //Map<String, List<String>> processMap = getWrongTrace(JSON.toJSONString(traceIdBatch.getTraceIdList()), port, batchPos);
+                	response = Global.SOCKET_RESPONSE_QUEUE.poll(1, TimeUnit.SECONDS);
+                	if (response != null) {
+                		Map<String,List<String>> processMap = JSON.parseObject(response, new TypeReference<Map<String, List<String>>>() {});
+                        if (processMap != null) {
+                            for (Map.Entry<String, List<String>> entry : processMap.entrySet()) {
+                                String traceId = entry.getKey();
+                                Set<String> spanSet = map.get(traceId);
+                                if (spanSet == null) {
+                                    spanSet = new HashSet<>();
+                                    map.put(traceId, spanSet);
+                                }
+                                spanSet.addAll(entry.getValue());
                             }
-                            spanSet.addAll(entry.getValue());
                         }
-                    }
+                	}
                 }
                 costTime = System.currentTimeMillis() - startTime;
-                if (costTime>0) {
-                	LOGGER.warn("getWrongTrace consume time: " + costTime);
+                Global.total_cost_time = Global.total_cost_time + costTime;
+                if (costTime>2) {
+                	LOGGER.warn("getWrongTrace batchPos: {} consume time: {}", batchPos, costTime);
                 }
-                LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ",result:" + map.size());
+                //LOGGER.info("getWrong:" + batchPos + ", traceIdsize:" + traceIdBatch.getTraceIdList().size() + ", result:" + map.size());
                 
                 // trigger generate checksum
                 Global.BACKEND_GEN_CHECKSUM_QUEUE.put((long) pos);
@@ -95,14 +123,9 @@ public class CheckSumService implements Runnable{
                 	pos = 0;
                 }
                 map = Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(pos);
-                if (map.size() > 0) {
-                	while (true) {
-                    	LOGGER.warn("-------------------- Waiting for backend pos release: "+ pos);
-                        Thread.sleep(10);
-                        if (map.size() == 0) {
-                            break;
-                        }
-                    }
+                while (!map.isEmpty()) {
+                	LOGGER.warn("-------------------- Waiting for backend pos release: "+ pos);
+                    Thread.sleep(10);
                 }
                 
             } catch (Exception e) {
@@ -151,6 +174,7 @@ public class CheckSumService implements Runnable{
             if (response.isSuccessful()) {
                 response.close();
                 LOGGER.warn("suc to sendCheckSum, result:" + result);
+                LOGGER.warn("total get trace time: " + Global.total_cost_time);
                 return true;
             }
             LOGGER.warn("fail to sendCheckSum:" + response.message());
@@ -171,6 +195,33 @@ public class CheckSumService implements Runnable{
         }
         return -1;
     }
-
+    
+    private boolean checkClientReady(String port) {
+        try {
+        	boolean systemReady = false;
+            String url = String.format("http://localhost:%s/getready", port);
+            Request request = new Request.Builder().url(url).get().build();
+            Response response = Utils.callHttp(request);
+            if (response.body().string().equals("yes")) {
+            	systemReady = true;
+            }
+            response.close();
+            return systemReady;
+        } catch (Exception e) {
+            LOGGER.error("checkClientReady port: {} error: {}", port, e.getMessage());
+        }
+        return false;
+    }
+    
+    private void setClientReady(String port) {
+        try {
+            String url = String.format("http://localhost:%s/setready", port);
+            Request request = new Request.Builder().url(url).get().build();
+            Response response = Utils.callHttp(request);
+            response.close();
+        } catch (Exception e) {
+            LOGGER.error("setClientReady port: {} error: {}", port, e.getMessage());
+        }
+    }
 
 }

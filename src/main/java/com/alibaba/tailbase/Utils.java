@@ -1,13 +1,13 @@
 package com.alibaba.tailbase;
 
+import java.io.IOException;
+import java.security.MessageDigest;
+import java.util.concurrent.TimeUnit;
+
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.util.concurrent.TimeUnit;
 
 public class Utils {
 
@@ -75,5 +75,10 @@ public class Utils {
             return true;
         }
         return false;
+    }
+    
+    public static String getPort(){
+        String port = System.getProperty("server.port", "8080");
+        return port;
     }
 }
