@@ -98,6 +98,11 @@ public class ClientProcessData implements Runnable {
                 }
                 if (count % Constants.BATCH_SIZE == 0) {
                 	batchPos = pos;
+                	// batchPos begin from 0, so need to minus 1
+                    updateWrongTraceId(badTraceIdList, batchPos);
+                    badTraceIdList.clear();
+                    //LOGGER.info("suc to updateBadTraceId, batchPos:" + batchPos);
+                    
                     pos++;
                     //LOGGER.info("******************************************************** pos changed: " + pos);
                     // loop cycle
@@ -111,10 +116,6 @@ public class ClientProcessData implements Runnable {
                     	LOGGER.warn("------------------- Completed count: {}. Waiting for pos release: {}", count, pos);
                         Thread.sleep(10);
                     }
-                    // batchPos begin from 0, so need to minus 1
-                    updateWrongTraceId(badTraceIdList, batchPos);
-                    badTraceIdList.clear();
-                    //LOGGER.info("suc to updateBadTraceId, batchPos:" + batchPos);
                 }
             }
             if (!badTraceIdList.isEmpty()) {
@@ -255,7 +256,7 @@ public class ClientProcessData implements Runnable {
     private String getPath(){
         String port = System.getProperty("server.port", "8080");
         Integer targetPort = CommonController.getDataSourcePort();
-        targetPort = 8080;															//remove before promote to production
+        //targetPort = 8080;															//remove before promote to production
         if ("8000".equals(port)) {
             return "http://localhost:" + targetPort + "/trace1.data";
         } else if ("8001".equals(port)){

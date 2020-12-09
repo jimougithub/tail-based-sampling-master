@@ -42,7 +42,7 @@ public class BackendGenCheckSum {
 	                LOGGER.info("released map: " + pos);
 				}
 			} catch (InterruptedException e) {
-				LOGGER.error("Poll BACKEND_GEN_CHECKSUM_QUEUE error", e);
+				LOGGER.error("Poll BACKEND_GEN_CHECKSUM_QUEUE error: " + e.getMessage());
 			}
 		}
 	}
