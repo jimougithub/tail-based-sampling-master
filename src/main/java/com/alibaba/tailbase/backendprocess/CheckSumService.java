@@ -114,6 +114,7 @@ public class CheckSumService implements Runnable{
                 pos++;
                 if (pos >= Global.BACKEND_CHECKSUM_BATCH_COUNT) {
                 	pos = 0;
+                	System.gc();
                 }
                 map = Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(pos);
                 while (!map.isEmpty()) {

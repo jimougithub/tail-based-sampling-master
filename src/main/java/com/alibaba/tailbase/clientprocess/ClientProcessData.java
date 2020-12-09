@@ -73,7 +73,7 @@ public class ClientProcessData implements Runnable {
             Map<String, List<String>> traceMap = BATCH_TRACE_LIST.get(pos);
             while ((line = bf.readLine()) != null) {
                 count++;
-                String[] cols = line.split("\\|");
+                String[] cols = line.split("\\|", 2);
                 if (cols != null && cols.length > 1 ) {
                     String traceId = cols[0];
                     if (!currentTraceId.equals(traceId)) {
@@ -85,18 +85,21 @@ public class ClientProcessData implements Runnable {
                         }
                     }
                     spanList.add(line);
-                    if (cols.length > 8 && !currentBadID.equals(traceId)) {
-                        String tags = cols[8];
-                        if (tags != null) {
-                            if (tags.contains("error=1")) {
+                    if (!currentBadID.equals(traceId)) {
+                        //if (cols[8] != null) {
+                    		if (line.contains("_code=200")) {
+                    			
+                    		} else if (line.contains("error=1")) {
                             	currentBadID = traceId;
                             	badTraceIdList.add(traceId);
-                            } else if (tags.contains("http.status_code=") && tags.indexOf("http.status_code=200") < 0) {
+                            } else if (line.contains("_code=") && line.indexOf("_code=200") < 0) {
                             	currentBadID = traceId;
                             	badTraceIdList.add(traceId);
                             }
-                        }
+                        //}
                     }
+                    line = null;
+                    cols = null;
                 }
                 if (count % Constants.BATCH_SIZE == 0) {
                 	batchPos = pos;
@@ -110,6 +113,7 @@ public class ClientProcessData implements Runnable {
                     // loop cycle
                     if (pos >= Constants.BATCH_COUNT) {
                         pos = 0;
+                        System.gc();
                     }
                     traceMap = BATCH_TRACE_LIST.get(pos);
                     // donot produce data, wait backend to consume data
