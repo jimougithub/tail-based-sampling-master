@@ -25,7 +25,9 @@ import com.alibaba.tailbase.Constants;
 import com.alibaba.tailbase.Global;
 import com.alibaba.tailbase.Utils;
 
+import okhttp3.FormBody;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 
 
@@ -137,13 +139,11 @@ public class ClientProcessData implements Runnable {
         }
         try {
             //LOGGER.info("updateBadTraceId, json:" + json + ", batch:" + batchPos);
-            /*RequestBody body = new FormBody.Builder()
+            RequestBody body = new FormBody.Builder()
                     .add("traceIdListJson", json).add("batchPos", batchPos + "").build();
             Request request = new Request.Builder().url("http://localhost:8002/setWrongTraceId").post(body).build();
             Response response = Utils.callHttp(request);
-            response.close();*/
-            //Use socket to send data
-            Global.SOCKET_SEND_QUEUE0.put("setWrongTraceId|" + json + "|" + batchPos);
+            response.close();
         } catch (Exception e) {
             LOGGER.warn("fail to updateBadTraceId, json:" + json + ", batch:" + batchPos);
         }
