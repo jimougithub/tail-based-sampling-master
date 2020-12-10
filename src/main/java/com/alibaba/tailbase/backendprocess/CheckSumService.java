@@ -75,6 +75,7 @@ public class CheckSumService implements Runnable{
                 if (traceIdBatch == null) {
                     // send checksum when client process has all finished.
                     if (BackendController.isFinished()) {
+                    	LOGGER.warn("--------------Finlished");
                         if (sendCheckSum()) {
                             break;
                         }
@@ -115,7 +116,7 @@ public class CheckSumService implements Runnable{
                 pos++;
                 if (pos >= Global.BACKEND_CHECKSUM_BATCH_COUNT) {
                 	pos = 0;
-                	System.gc();
+                	//System.gc();
                 }
                 map = Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(pos);
                 while (!map.isEmpty()) {

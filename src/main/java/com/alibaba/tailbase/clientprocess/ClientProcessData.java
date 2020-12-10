@@ -111,7 +111,7 @@ public class ClientProcessData implements Runnable {
                     // loop cycle
                     if (pos >= Constants.BATCH_COUNT) {
                         pos = 0;
-                        System.gc();
+                        //System.gc();
                     }
                     traceMap = BATCH_TRACE_LIST.get(pos);
                     // donot produce data, wait backend to consume data
@@ -119,7 +119,7 @@ public class ClientProcessData implements Runnable {
                     for (int loopi=0; loopi< 10; loopi++) {
                     	if (!traceMap.isEmpty()) {
                     		LOGGER.warn("------------------- Completed count: {}. Waiting for pos release: {}", count, pos);
-                            Thread.sleep(20);
+                            Thread.sleep(10);
                     	} else {
                     		break;
                     	}
@@ -263,7 +263,7 @@ public class ClientProcessData implements Runnable {
     private String getPath(){
         String port = System.getProperty("server.port", "8080");
         Integer targetPort = CommonController.getDataSourcePort();
-        targetPort = 8080;															//remove before promote to production
+        //targetPort = 8080;															//remove before promote to production
         if ("8000".equals(port)) {
             return "http://localhost:" + targetPort + "/trace1.data";
         } else if ("8001".equals(port)){

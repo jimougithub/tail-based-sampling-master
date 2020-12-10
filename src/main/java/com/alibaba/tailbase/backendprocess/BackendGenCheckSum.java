@@ -39,9 +39,10 @@ public class BackendGenCheckSum {
 	                }
 	                // Release map
 	                map.clear();
-	                LOGGER.info("released map: " + pos);
+	                LOGGER.warn("released map: " + pos);
 				}
 			} catch (InterruptedException e) {
+				map.clear();
 				LOGGER.error("Poll BACKEND_GEN_CHECKSUM_QUEUE error: " + e.getMessage());
 			}
 		}
