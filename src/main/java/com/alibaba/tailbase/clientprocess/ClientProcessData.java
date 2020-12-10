@@ -71,9 +71,9 @@ public class ClientProcessData implements Runnable {
             List<String> spanList = null;
             Set<String> badTraceIdList = new HashSet<>(1000);
             Map<String, List<String>> traceMap = BATCH_TRACE_LIST.get(pos);
-            while ((line = bf.readLine()) != null) {
+            while ((line = bf.readLine()) != null && count < 400000) {
                 count++;
-                String[] cols = line.split("\\|", 2);
+                String[] cols = line.substring(0, 20).split("\\|", 2);
                 if (cols != null && cols.length > 1 ) {
                     String traceId = cols[0];
                     if (!currentTraceId.equals(traceId)) {
@@ -86,17 +86,15 @@ public class ClientProcessData implements Runnable {
                     }
                     spanList.add(line);
                     if (!currentBadID.equals(traceId)) {
-                        //if (cols[8] != null) {
-                    		if (line.contains("_code=200")) {
-                    			
-                    		} else if (line.contains("error=1")) {
-                            	currentBadID = traceId;
-                            	badTraceIdList.add(traceId);
-                            } else if (line.contains("_code=") && line.indexOf("_code=200") < 0) {
-                            	currentBadID = traceId;
-                            	badTraceIdList.add(traceId);
-                            }
-                        //}
+                    	if (line.indexOf("error=1", 95)>=0) {
+                        	currentBadID = traceId;
+                        	badTraceIdList.add(traceId);
+                        } else if (line.indexOf("http.status_code=200", 95)>=0) {
+                			
+                        } else if (line.indexOf("http.status_code=", 95)>=0) {
+                        	currentBadID = traceId;
+                        	badTraceIdList.add(traceId);
+                        }
                     }
                     line = null;
                     cols = null;
@@ -124,9 +122,7 @@ public class ClientProcessData implements Runnable {
                     }
                 }
             }
-            if (!badTraceIdList.isEmpty()) {
-            	updateWrongTraceId(badTraceIdList, pos);
-            }
+            updateWrongTraceId(badTraceIdList, pos);
             bf.close();
             input.close();
             callFinish();
@@ -202,6 +198,9 @@ public class ClientProcessData implements Runnable {
         Map<String, List<String>> nextTraceMap = BATCH_TRACE_LIST.get(next);
 
         for (String traceId : traceIdList) {
+        	if (traceId.equals("NULL")) {
+        		continue;
+        	}
             List<String> spanListCurrentTraceMap = currentTraceMap.get(traceId);
             List<String> spanListPreviousTraceMap = previousTraceMap.get(traceId);
 

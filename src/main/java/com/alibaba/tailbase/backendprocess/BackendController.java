@@ -71,12 +71,12 @@ public class BackendController {
      * @return
      */
    public static boolean isFinished() {
-       for (int i = 0; i < Constants.BATCH_COUNT; i++) {
+       /*for (int i = 0; i < Constants.BATCH_COUNT; i++) {
            TraceIdBatch currentBatch = TRACEID_BATCH_LIST.get(i);
            if (currentBatch.getProcessCount() > 0) {
                return false;
            }
-       }
+       }*/
        for (int i = 0; i < Global.BACKEND_CHECKSUM_BATCH_COUNT; i++) {
            if (!Global.BACKEND_CHECKSUM_BATCH_TRACE_LIST.get(i).isEmpty()) {
                return false;
