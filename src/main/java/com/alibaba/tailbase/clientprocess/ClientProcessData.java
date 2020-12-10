@@ -71,7 +71,7 @@ public class ClientProcessData implements Runnable {
             List<String> spanList = null;
             Set<String> badTraceIdList = new HashSet<>(1000);
             Map<String, List<String>> traceMap = BATCH_TRACE_LIST.get(pos);
-            while ((line = bf.readLine()) != null && count < 400000) {
+            while ((line = bf.readLine()) != null) {
                 count++;
                 String[] cols = line.substring(0, 20).split("\\|", 2);
                 if (cols != null && cols.length > 1 ) {
@@ -116,9 +116,13 @@ public class ClientProcessData implements Runnable {
                     traceMap = BATCH_TRACE_LIST.get(pos);
                     // donot produce data, wait backend to consume data
                     // TODO to use lock/notify
-                    while (!traceMap.isEmpty()) {
-                    	LOGGER.warn("------------------- Completed count: {}. Waiting for pos release: {}", count, pos);
-                        Thread.sleep(10);
+                    for (int loopi=0; loopi< 10; loopi++) {
+                    	if (!traceMap.isEmpty()) {
+                    		LOGGER.warn("------------------- Completed count: {}. Waiting for pos release: {}", count, pos);
+                            Thread.sleep(20);
+                    	} else {
+                    		break;
+                    	}
                     }
                 }
             }
@@ -259,7 +263,7 @@ public class ClientProcessData implements Runnable {
     private String getPath(){
         String port = System.getProperty("server.port", "8080");
         Integer targetPort = CommonController.getDataSourcePort();
-        //targetPort = 8080;															//remove before promote to production
+        targetPort = 8080;															//remove before promote to production
         if ("8000".equals(port)) {
             return "http://localhost:" + targetPort + "/trace1.data";
         } else if ("8001".equals(port)){

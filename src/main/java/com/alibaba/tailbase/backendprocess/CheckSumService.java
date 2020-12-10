@@ -79,6 +79,7 @@ public class CheckSumService implements Runnable{
                             break;
                         }
                     }
+                    Thread.sleep(10);
                     continue;
                 }
                 
